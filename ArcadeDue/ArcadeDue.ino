@@ -49,7 +49,7 @@ PS2Mouse trackball(TRACKBALL_CLOCK, TRACKBALL_DATA, STREAM);
 
 unsigned char cumulativeMask = 0x00;
 
-Modes mode = Modes::ASETNIOP;
+Modes mode = Modes::PLAYER_TWO;
 
 void setup() {
   Serial.begin(9600);
@@ -89,6 +89,41 @@ void loop() {
   }
   Serial.println(" ");
 */
+
+  if(KEY(P2) && KEY(C1)) mode = Modes::PLAYER_ONE;
+  if(KEY(P3) && KEY(C1)) mode = Modes::ASETNIOP;
+  if(KEY(P2) && KEY(P3) && KEY(C1)) mode = Modes::PLAYER_TWO;
+  if(KEY(P2) && KEY(P3) && KEY(P4) && KEY(P5)) mode = Modes::PINBALL_JOY;
+
+  if(mode == Modes::PINBALL_JOY) {
+    JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
+    JoystickLeft.setYAxis(512+(KEY(LD)-KEY(LU))*512);
+    JoystickLeft.setButton(0, KEY(P2));
+    JoystickLeft.setButton(1, KEY(P3));
+    JoystickLeft.setButton(2, KEY(P4));
+    JoystickLeft.setButton(3, KEY(L1));
+    JoystickLeft.setButton(4, KEY(L7));
+    JoystickLeft.setButton(5, KEY(L8));
+    JoystickLeft.setButton(6, KEY(P1));
+    JoystickLeft.setButton(7, KEY(P5));
+    JoystickLeft.setButton(8, KEY(C1));
+    JoystickLeft.setButton(9, KEY(C2));
+  }
+
+  if(mode == Modes::PLAYER_ONE) {
+    JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
+    JoystickLeft.setYAxis(512+(KEY(LD)-KEY(LU))*512);
+    JoystickLeft.setButton(0, KEY(L6));
+    JoystickLeft.setButton(1, KEY(L2));
+    JoystickLeft.setButton(2, KEY(L5));
+    JoystickLeft.setButton(3, KEY(L1));
+    JoystickLeft.setButton(4, KEY(L7));
+    JoystickLeft.setButton(5, KEY(L8));
+    JoystickLeft.setButton(6, KEY(L3));
+    JoystickLeft.setButton(7, KEY(L4));
+    JoystickLeft.setButton(8, KEY(C1));
+    JoystickLeft.setButton(9, KEY(C2));
+  }
 
   if(mode == Modes::PLAYER_TWO) {
     JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
