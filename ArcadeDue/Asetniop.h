@@ -1,3 +1,5 @@
+#include <Keyboard.h>
+
 // asetniop LUT
 char asetniop_lut[256] = {
   /*ASET NIOP*/
@@ -16,9 +18,9 @@ char asetniop_lut[256] = {
   /*____ NI__*/ 'h',
   /*____ NI_P*/ 0,
   /*____ NIO_*/ 0,
-  /*____ NIOP*/ 0,	/*ENTER*/
+  /*____ NIOP*/ KEY_RETURN,
   /*___T ____*/ 't',
-  /*___T ___P*/ 0,	/*BACKSPACE*/ /*Special case: can keep pressed*/
+  /*___T ___P*/ KEY_BACKSPACE,
   /*___T __O_*/ 'g',
   /*___T __OP*/ 0,
   /*___T _I__*/ 'v',
@@ -196,7 +198,7 @@ char asetniop_lut[256] = {
   /*AS__ ____*/ 'w',
   /*AS__ ___P*/ 0,
   /*AS__ __O_*/ 0,
-  /*AS__ __OP*/ 0,	/*DEL*/
+  /*AS__ __OP*/ KEY_DELETE,
   /*AS__ _I__*/ 0,
   /*AS__ _I_P*/ 0,
   /*AS__ _IO_*/ 0,
@@ -241,16 +243,16 @@ char asetniop_lut[256] = {
   /*ASE_ NI_P*/ 0,
   /*ASE_ NIO_*/ 0,
   /*ASE_ NIOP*/ 0,
-  /*ASET ____*/ 0,	/*TAB*/
-  /*ASET ___P*/ 0,	/*END*/
-  /*ASET __O_*/ 0,	/*HOME*/
+  /*ASET ____*/ KEY_TAB,
+  /*ASET ___P*/ KEY_END,
+  /*ASET __O_*/ KEY_HOME,
   /*ASET __OP*/ 0,
   /*ASET _I__*/ 0,
-  /*ASET _I_P*/ 0,	/*PAGE DOWN*/
+  /*ASET _I_P*/ KEY_PAGE_DOWN,
   /*ASET _IO_*/ 0,
   /*ASET _IOP*/ 0,
   /*ASET N___*/ 0,
-  /*ASET N__P*/ 0,	/*PAGE UP*/
+  /*ASET N__P*/ KEY_PAGE_UP,
   /*ASET N_O_*/ 0,
   /*ASET N_OP*/ 0,
   /*ASET NI__*/ 0,

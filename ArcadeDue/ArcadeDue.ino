@@ -7,6 +7,8 @@
 
 #include <Keyboard.h>
 #include <Mouse.h>
+/* From: http://github.com/kristopher/PS2-Mouse-Arduino */
+#include <PS2Mouse.h>
 /* From: https://github.com/MHeironimus/ArduinoJoystickLibrary */
 #include <Joystick.h>
 #include "Asetniop.h"
@@ -20,50 +22,34 @@ const byte rows[KMS] = {42, 44, 46, 48, 50, 52};
 const byte cols[KMS] = {43, 45, 47, 49, 51, 53};
 byte keys[KMS*KMS] = {0, };
 
-/*
-00 C 1
-01
-02 C 2
-03 C 3
-04 C 4
-05
+/* Key Names */
+enum struct KN: byte{
+  C1, N1, C2, C3, C4, N2,
+  P2, P1, P3, P4, P5, N3,
+  R5, RL, R6, R7, R8, RU,
+  R1, RD, R2, R3, R4, RR,
+  L1, LR, L2, L3, L4, LD,
+  L5, LU, L6, L7, L8, LL
+};
 
-10 P 2
-11 P 1
-12 P 3
-13 P 4
-14 P 5
-15
+enum struct Modes: byte{
+  PLAYER_ONE,
+  PLAYER_TWO,
+  ASETNIOP,
+  KEYBOARD,
+  PINBALL_JOY,
+  PINBALL_PC,
+};
 
-20 R 5
-21 R L
-22 R 6
-23 R 7
-24 R 8
-25 R U
+#define KEY(kn) keys[static_cast<byte>(KN::kn)]
 
-30 R 1
-31 R D
-32 R 2
-33 R 3
-34 R 4
-35 R R
+#define TRACKBALL_DATA 5
+#define TRACKBALL_CLOCK 6
+PS2Mouse trackball(TRACKBALL_CLOCK, TRACKBALL_DATA, STREAM);
 
-40 L 1
-41 L R
-42 L 2
-43 L 3
-44 L 4
-45 L D
+unsigned char cumulativeMask = 0x00;
 
-50 L 5
-51 L U
-52 L 6
-53 L 7
-54 L 8
-55 L L
-
-*/
+Modes mode = Modes::ASETNIOP;
 
 void setup() {
   Serial.begin(9600);
@@ -77,8 +63,11 @@ void setup() {
     pinMode(rows[row], INPUT_PULLUP);
   }
   for (byte col=0; col<KMS; col++) {
-    pinMode(cols[col], INPUT_PULLUP);
+    pinMode(cols[col], INPUT);
   }
+
+  trackball.initialize();
+  Mouse.begin();
 }
 
 void loop() {
@@ -88,48 +77,80 @@ void loop() {
     for (byte row=0; row<KMS; row++) {
       keys[col*KMS+row]=!digitalRead(rows[row]);
     }
-    pinMode(cols[col], INPUT_PULLUP);
+    pinMode(cols[col], INPUT);
   }
 
+/*
   for (byte col=0; col<KMS; col++) {
     for (byte row=0; row<KMS; row++) {
       Serial.print(keys[col*KMS+row]);
     }
     Serial.print(" ");
   }
-
-/*
-  Serial.print("    ");
-
-  for (byte row=0; row<KMS; row++) {
-    pinMode(rows[row], OUTPUT);
-    digitalWrite(rows[row], LOW);
-    for (byte col=0; col<KMS; col++) {
-      Serial.print(digitalRead(cols[col]));
-    }
-    Serial.print(" ");
-    pinMode(rows[row], INPUT_PULLUP);
-  }
-*/
   Serial.println(" ");
+*/
 
-/*  for (int index = 0; index < 4; index++)
-  {
-    int currentButtonState = 0;
-    if (currentButtonState != lastButtonState[index])
-    {
-      if (index < 2) {
-        JoystickLeft.setButton(index, currentButtonState);
-        JoystickRight.setButton(index+4, currentButtonState);
-        lastButtonState[index] = currentButtonState;
-      } else {
-        if (currentButtonState) {
-          Keyboard.write(47 + index);
-          Mouse.move(5, 5, 0);
-          delay(500);
-        }
-      }
+  if(mode == Modes::PLAYER_TWO) {
+    JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
+    JoystickLeft.setYAxis(512+(KEY(LD)-KEY(LU))*512);
+    JoystickLeft.setButton(0, KEY(L6));
+    JoystickLeft.setButton(1, KEY(L2));
+    JoystickLeft.setButton(2, KEY(L5));
+    JoystickLeft.setButton(3, KEY(L1));
+    JoystickLeft.setButton(4, KEY(L7));
+    JoystickLeft.setButton(5, KEY(L8));
+    JoystickLeft.setButton(6, KEY(L3));
+    JoystickLeft.setButton(7, KEY(L4));
+    JoystickLeft.setButton(8, KEY(C1));
+    JoystickLeft.setButton(9, KEY(C2));
+  
+    JoystickRight.setXAxis(512+(KEY(RR)-KEY(RL))*512);
+    JoystickRight.setYAxis(512+(KEY(RD)-KEY(RU))*512);
+    JoystickRight.setButton(0, KEY(R6));
+    JoystickRight.setButton(1, KEY(R2));
+    JoystickRight.setButton(2, KEY(R5));
+    JoystickRight.setButton(3, KEY(R1));
+    JoystickRight.setButton(4, KEY(R7));
+    JoystickRight.setButton(5, KEY(R8));
+    JoystickRight.setButton(6, KEY(R3));
+    JoystickRight.setButton(7, KEY(R4));
+    JoystickRight.setButton(8, KEY(C3));
+    JoystickRight.setButton(9, KEY(C4));
+  }
+
+  /**
+   * data[0]): Status Byte: 0x01=left button, 0x10=right button
+   * data[1]): Movement Data: + is down - is up
+   * data[2]): Movement Data: - is left + is right
+  */
+  int16_t data[3];
+  trackball.report(data);
+
+  Mouse.move(data[2], data[1], 0);
+  if((data[0]&0x1) && !(Mouse.isPressed(MOUSE_LEFT)))    Mouse.press(MOUSE_LEFT);
+  if(!(data[0]&0x1) && (Mouse.isPressed(MOUSE_LEFT)))    Mouse.release(MOUSE_LEFT);
+  data[0]>>=1;
+  if((data[0]&0x1) && !(Mouse.isPressed(MOUSE_RIGHT)))   Mouse.press(MOUSE_RIGHT);
+  if(!(data[0]&0x1) && (Mouse.isPressed(MOUSE_RIGHT)))   Mouse.release(MOUSE_RIGHT);
+
+  if(mode == Modes::ASETNIOP) {
+    unsigned char pressedMask = 0x00;
+    pressedMask |= (KEY(L1)) << 7;
+    pressedMask |= (KEY(L2)) << 6;
+    pressedMask |= (KEY(L3)) << 5;
+    pressedMask |= (KEY(L4)) << 4;
+    pressedMask |= (KEY(R1)) << 3;
+    pressedMask |= (KEY(R2)) << 2;
+    pressedMask |= (KEY(R3)) << 1;
+    pressedMask |= (KEY(R4)) << 0;
+  
+    if (pressedMask == 0 && cumulativeMask != 0) {
+      Keyboard.write(asetniop_lut[cumulativeMask]);
+      delay(50);
+      cumulativeMask = 0;
+    } else {
+      cumulativeMask |= pressedMask;
     }
   }
-*/
+
 }
