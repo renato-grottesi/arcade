@@ -11,7 +11,14 @@
 #include <PS2Mouse.h>
 /* From: https://github.com/MHeironimus/ArduinoJoystickLibrary */
 #include <Joystick.h>
+/* From: https://github.com/ElectronicCats/mpu6050 */
+#include "I2Cdev.h"
+#include "MPU6050.h"
+#include "Wire.h"
+/* Local ASETNIOP implementation */
 #include "Asetniop.h"
+
+MPU6050 accelgyro;
 
 Joystick_ JoystickLeft(0x03);
 Joystick_ JoystickRight(0x04);
@@ -26,10 +33,10 @@ byte keys[KMS*KMS] = {0, };
 enum struct KN: byte{
   C1, N1, C2, C3, C4, N2,
   P2, P1, P3, P4, P5, N3,
-  R5, RL, R6, R7, R8, RU,
-  R1, RD, R2, R3, R4, RR,
-  L1, LR, L2, L3, L4, LD,
-  L5, LU, L6, L7, L8, LL
+  R8, RL, R6, R5, R7, RU,
+  R4, RD, R2, R1, R3, RR,
+  L4, LR, L2, L3, L1, LD,
+  L8, LU, L6, L7, L5, LL
 };
 
 enum struct Modes: byte{
@@ -54,14 +61,21 @@ Modes mode = Modes::PLAYER_TWO;
 void setup() {
   Serial.begin(9600);
 
+  // The accelerometer needs I2C
+  Wire.begin();
+  // Initialize and verify the accelerometer
+  accelgyro.initialize();
+  Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+
   // Initialize the joysticks
   JoystickLeft.begin();
   JoystickRight.begin();
 
-  // Set all pins to High Impedance
+  // Set all rows as input pullup, connected directly to the buttons
   for (byte row=0; row<KMS; row++) {
     pinMode(rows[row], INPUT_PULLUP);
   }
+  // Set all columns to high impedance, connected to the buttons via diodes
   for (byte col=0; col<KMS; col++) {
     pinMode(cols[col], INPUT);
   }
@@ -71,6 +85,12 @@ void setup() {
 }
 
 void loop() {
+  int16_t ax, ay, az;
+  accelgyro.getAcceleration(&ax, &ay, &az);
+  // TODO Filter and send as pinball mode events
+//  Serial.println(ax); // right/left nudge
+//  Serial.println(az); // front push/pull
+
   for (byte col=0; col<KMS; col++) {
     pinMode(cols[col], OUTPUT);
     digitalWrite(cols[col], LOW);
@@ -94,6 +114,20 @@ void loop() {
   if(KEY(P3) && KEY(C1)) mode = Modes::ASETNIOP;
   if(KEY(P2) && KEY(P3) && KEY(C1)) mode = Modes::PLAYER_TWO;
   if(KEY(P2) && KEY(P3) && KEY(P4) && KEY(P5)) mode = Modes::PINBALL_JOY;
+
+  //JoystickRight.setXAxis(512);
+  //JoystickRight.setYAxis(512);
+  JoystickRight.setZAxis(512);
+  JoystickRight.setRxAxis(512);
+  JoystickRight.setRyAxis(512);
+  JoystickRight.setRzAxis(512);
+
+  //JoystickLeft.setXAxis(512);
+  //JoystickLeft.setYAxis(512);
+  JoystickLeft.setZAxis(512);
+  JoystickLeft.setRxAxis(512);
+  JoystickLeft.setRyAxis(512);
+  JoystickLeft.setRzAxis(512);
 
   if(mode == Modes::PINBALL_JOY) {
     JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
