@@ -80,11 +80,48 @@ void setup() {
     pinMode(cols[col], INPUT);
   }
 
+  // Singled out pins
+  pinMode(3, INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
+
+  for (byte col=22; col<40; col++) {
+    pinMode(col, OUTPUT);
+    digitalWrite(col, HIGH);
+//    digitalWrite(col, LOW);
+  }
+
+  for (byte col=14; col<20; col++) {
+    pinMode(col, OUTPUT);
+    digitalWrite(col, LOW);
+  }
+
+  digitalWrite(15, HIGH);
+  digitalWrite(30, LOW);
+
   trackball.initialize();
   Mouse.begin();
 }
 
+int cn=0;
+int cw=0;
+
 void loop() {
+
+  // TODO: LED control
+  digitalWrite(26+cn*2, HIGH);
+  digitalWrite(15+cw, LOW);
+  cn = (cn+1) % 6;
+  if(cn==0)   cw = (cw+1) % 4;
+  digitalWrite(15+cw, HIGH);
+  digitalWrite(26+cn*2, LOW);
+
+  // 14 is C2, 19 is mose
+  if((cn+cw) == 0)
+    { digitalWrite(14, HIGH); digitalWrite(28, LOW); digitalWrite(19, HIGH); digitalWrite(38, LOW); }
+  else
+    { digitalWrite(14, LOW); digitalWrite(19, LOW); digitalWrite(38, HIGH); }
+
+  
   int16_t ax, ay, az;
   accelgyro.getAcceleration(&ax, &ay, &az);
   // TODO Filter and send as pinball mode events
@@ -100,7 +137,19 @@ void loop() {
     pinMode(cols[col], INPUT);
   }
 
-/*
+// R4 singled to 4
+  pinMode(49, OUTPUT);
+  digitalWrite(49, LOW);
+  KEY(R4) = !digitalRead(4);
+  pinMode(49, INPUT);
+
+// L8 singled to 3
+  pinMode(53, OUTPUT);
+  digitalWrite(53, LOW);
+  KEY(L8) = !digitalRead(3);
+  pinMode(53, INPUT);
+
+#if 0
   for (byte col=0; col<KMS; col++) {
     for (byte row=0; row<KMS; row++) {
       Serial.print(keys[col*KMS+row]);
@@ -108,7 +157,7 @@ void loop() {
     Serial.print(" ");
   }
   Serial.println(" ");
-*/
+#endif
 
   if(KEY(P2) && KEY(C1)) mode = Modes::PLAYER_ONE;
   if(KEY(P3) && KEY(C1)) mode = Modes::ASETNIOP;
