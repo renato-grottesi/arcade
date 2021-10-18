@@ -1,5 +1,5 @@
 // Implements two Joysticks, one Keyboard and a Mouse running
-// on an Arduino Due connected to my arcade machine
+// on the Arduino Due connected to my arcade machine.
 // 
 // by Renato Grottesi
 // 09/08/2021
@@ -55,6 +55,9 @@ enum struct Modes: byte{
 PS2Mouse trackball(TRACKBALL_CLOCK, TRACKBALL_DATA, STREAM);
 
 unsigned char cumulativeMask = 0x00;
+
+/* When it is positive, the pinball is in cool-down mode. */
+int16_t nudging = 0;
 
 Modes mode = Modes::PLAYER_TWO;
 
@@ -121,13 +124,7 @@ void loop() {
   else
     { digitalWrite(14, LOW); digitalWrite(19, LOW); digitalWrite(38, HIGH); }
 
-  
-  int16_t ax, ay, az;
-  accelgyro.getAcceleration(&ax, &ay, &az);
-  // TODO Filter and send as pinball mode events
-//  Serial.println(ax); // right/left nudge
-//  Serial.println(az); // front push/pull
-
+  /* Read all the buttons */
   for (byte col=0; col<KMS; col++) {
     pinMode(cols[col], OUTPUT);
     digitalWrite(cols[col], LOW);
@@ -164,23 +161,22 @@ void loop() {
   if(KEY(P2) && KEY(P3) && KEY(C1)) mode = Modes::PLAYER_TWO;
   if(KEY(P2) && KEY(P3) && KEY(P4) && KEY(P5)) mode = Modes::PINBALL_JOY;
 
-  //JoystickRight.setXAxis(512);
-  //JoystickRight.setYAxis(512);
+  /* Set unused axis to zero. */
   JoystickRight.setZAxis(512);
   JoystickRight.setRxAxis(512);
   JoystickRight.setRyAxis(512);
   JoystickRight.setRzAxis(512);
-
-  //JoystickLeft.setXAxis(512);
-  //JoystickLeft.setYAxis(512);
-  JoystickLeft.setZAxis(512);
-  JoystickLeft.setRxAxis(512);
   JoystickLeft.setRyAxis(512);
   JoystickLeft.setRzAxis(512);
 
   if(mode == Modes::PINBALL_JOY) {
-    JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
-    JoystickLeft.setYAxis(512+(KEY(LD)-KEY(LU))*512);
+    JoystickLeft.setZAxis(512);
+    JoystickLeft.setRxAxis(512);
+    /* Allow joystick controls while not nudging. */
+    if(nudging<0) {
+      JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
+      JoystickLeft.setYAxis(512+(KEY(LD)-KEY(LU))*512);
+    }
     JoystickLeft.setButton(0, KEY(P2));
     JoystickLeft.setButton(1, KEY(P3));
     JoystickLeft.setButton(2, KEY(P4));
@@ -191,6 +187,32 @@ void loop() {
     JoystickLeft.setButton(7, KEY(P5));
     JoystickLeft.setButton(8, KEY(C1));
     JoystickLeft.setButton(9, KEY(C2));
+
+    /* ax oscillate around 1100.
+     * A powerfull enough side-nudge sends it below 100 or over 2100.
+     * az oscillate around 3900.
+     * A powerfull enogh push sends it above 4600.
+     */
+    int16_t ax, ay, az;
+    accelgyro.getAcceleration(&ax, &ay, &az);
+
+    if(nudging<0)
+    {
+      nudging = 0;
+      if(abs(ax-1100)>1000) {
+        nudging = 100;
+        if((ax-1100) > 0)
+          JoystickLeft.setXAxis(512+512); // right nudge
+        else
+          JoystickLeft.setXAxis(512-512); // left nudge
+      }
+      else if(abs(az-3900)>800) {
+        nudging = 100;
+        JoystickLeft.setYAxis(512-512); // front push
+      }
+    } else {
+      nudging--;
+    }
   }
 
   if(mode == Modes::PLAYER_ONE) {
@@ -206,9 +228,23 @@ void loop() {
     JoystickLeft.setButton(7, KEY(L4));
     JoystickLeft.setButton(8, KEY(C1));
     JoystickLeft.setButton(9, KEY(C2));
+    JoystickLeft.setZAxis(512+(KEY(RR)-KEY(RL))*512);
+    JoystickLeft.setRxAxis(512+(KEY(RD)-KEY(RU))*512);
+    JoystickRight.setButton(10, KEY(R6));
+    JoystickRight.setButton(11, KEY(R2));
+    JoystickRight.setButton(12, KEY(R5));
+    JoystickRight.setButton(13, KEY(R1));
+    JoystickRight.setButton(14, KEY(R7));
+    JoystickRight.setButton(15, KEY(R8));
+    JoystickRight.setButton(16, KEY(R3));
+    JoystickRight.setButton(17, KEY(R4));
+    JoystickRight.setButton(18, KEY(C3));
+    JoystickRight.setButton(19, KEY(C4));
   }
 
   if(mode == Modes::PLAYER_TWO) {
+    JoystickLeft.setZAxis(512);
+    JoystickLeft.setRxAxis(512);
     JoystickLeft.setXAxis(512+(KEY(LR)-KEY(LL))*512);
     JoystickLeft.setYAxis(512+(KEY(LD)-KEY(LU))*512);
     JoystickLeft.setButton(0, KEY(L6));
