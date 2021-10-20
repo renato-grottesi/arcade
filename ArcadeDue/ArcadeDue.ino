@@ -8,7 +8,7 @@
 #include <Keyboard.h>
 #include <Mouse.h>
 /* From: http://github.com/kristopher/PS2-Mouse-Arduino */
-#include <PS2Mouse.h>
+#include "PS2Mouse.h"
 /* From: https://github.com/MHeironimus/ArduinoJoystickLibrary */
 #include <Joystick.h>
 /* From: https://github.com/ElectronicCats/mpu6050 */
@@ -61,6 +61,41 @@ int16_t nudging = 0;
 
 Modes mode = Modes::PLAYER_TWO;
 
+/* LEDs Names */
+enum struct LEDN: byte{
+  MS,
+  C1, C2, C3, C4,
+  P1, P2, P3, P4, P5,
+  R1, R2, R3, R4, R5, R6, R7, R8,
+  L1, L2, L3, L4, L5, L6, L7, L8,
+};
+
+const byte LEDrows[] = {
+  19, 
+  15, 16, 17, 18, 
+  15, 14, 16, 17, 18, 
+  15, 16, 17, 18, 15, 16, 17, 18, 
+  15, 16, 17, 18, 15, 16, 17, 18, 
+};
+
+const byte LEDcols[] = {
+  38, 
+  26, 26, 26, 26, 
+  28, 28, 28, 28, 28, 
+  32, 32, 32, 32, 30, 30, 30, 30, 
+  34, 34, 34, 34, 36, 36, 36, 36, 
+};
+
+static inline void led_on(LEDN LEDName) {
+  digitalWrite(LEDrows[static_cast<byte>(LEDName)], HIGH);
+  digitalWrite(LEDcols[static_cast<byte>(LEDName)], LOW);
+};
+
+static inline void led_off(LEDN LEDName) {
+  digitalWrite(LEDrows[static_cast<byte>(LEDName)], LOW);
+  digitalWrite(LEDcols[static_cast<byte>(LEDName)], HIGH);
+};
+
 void setup() {
   Serial.begin(9600);
 
@@ -83,23 +118,29 @@ void setup() {
     pinMode(cols[col], INPUT);
   }
 
-  // Singled out pins
+  // Singled out input pins
   pinMode(3, INPUT_PULLUP);
   pinMode(4, INPUT_PULLUP);
 
+  // Turn off all LEDs columns
   for (byte col=22; col<40; col++) {
     pinMode(col, OUTPUT);
     digitalWrite(col, HIGH);
-//    digitalWrite(col, LOW);
   }
 
-  for (byte col=14; col<20; col++) {
-    pinMode(col, OUTPUT);
-    digitalWrite(col, LOW);
+  // Turn off all LEDs rows
+  for (byte row=14; row<20; row++) {
+    pinMode(row, OUTPUT);
+    digitalWrite(row, LOW);
   }
 
-  digitalWrite(15, HIGH);
-  digitalWrite(30, LOW);
+  // TODO: LED control
+  {
+    digitalWrite(26+4, LOW);
+    digitalWrite(26+6, LOW);
+    digitalWrite(26+8, LOW);
+    digitalWrite(26+10, LOW);
+  }
 
   trackball.initialize();
   Mouse.begin();
@@ -109,20 +150,6 @@ int cn=0;
 int cw=0;
 
 void loop() {
-
-  // TODO: LED control
-  digitalWrite(26+cn*2, HIGH);
-  digitalWrite(15+cw, LOW);
-  cn = (cn+1) % 6;
-  if(cn==0)   cw = (cw+1) % 4;
-  digitalWrite(15+cw, HIGH);
-  digitalWrite(26+cn*2, LOW);
-
-  // 14 is C2, 19 is mose
-  if((cn+cw) == 0)
-    { digitalWrite(14, HIGH); digitalWrite(28, LOW); digitalWrite(19, HIGH); digitalWrite(38, LOW); }
-  else
-    { digitalWrite(14, LOW); digitalWrite(19, LOW); digitalWrite(38, HIGH); }
 
   /* Read all the buttons */
   for (byte col=0; col<KMS; col++) {
@@ -278,7 +305,25 @@ void loop() {
    * data[2]): Movement Data: - is left + is right
   */
   int16_t data[3];
+
+  // TODO: LED control
+  {
+    led_on(LEDN::MS);
+    digitalWrite(15+cw, LOW);
+    cw = (cw+1) % 4;
+    digitalWrite(15+cw, HIGH);
+  }
+  // The following function is the bottleneck of the firmware
+  trackball.write(0xeb); // Send Read Data
+  // TODO: LED control
+  {
+    led_off(LEDN::MS);
+    digitalWrite(15+cw, LOW);
+    cw = (cw+1) % 4;
+    digitalWrite(15+cw, HIGH);
+  }
   trackball.report(data);
+
 
   Mouse.move(data[2], data[1], 0);
   if((data[0]&0x1) && !(Mouse.isPressed(MOUSE_LEFT)))    Mouse.press(MOUSE_LEFT);
