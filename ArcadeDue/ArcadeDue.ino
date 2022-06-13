@@ -28,6 +28,15 @@ Joystick_ JoystickRight(0x04);
 const byte rows[KMS] = {42, 44, 46, 48, 50, 52};
 const byte cols[KMS] = {43, 45, 47, 49, 51, 53};
 byte keys[KMS*KMS] = {0, };
+byte old_keys[KMS*KMS] = {0, };
+const byte immediate_keys[KMS*KMS] = {
+  'q', 'w', 'e', 'r', 't', 'y',
+  'u', 'i', 'o', 'p', 'a', 's',
+  'd', 'f', 'g', 'h', 'j', 'k',
+  'l', 'z', 'x', 'c', 'v', 'b',
+  'n', 'm', '0', '1', '2', '3',
+  '4', '5', '6', '7', '8', '9',
+};
 
 /* Key Names */
 enum struct KN: byte{
@@ -46,6 +55,7 @@ enum struct Modes: byte{
   KEYBOARD,
   PINBALL_JOY,
   PINBALL_PC,
+  KEYBOARD_IMMEDIATE_MODE,
 };
 
 #define KEY(kn) keys[static_cast<byte>(KN::kn)]
@@ -60,6 +70,7 @@ unsigned char cumulativeMask = 0x00;
 int16_t nudging = 0;
 
 Modes mode = Modes::PLAYER_TWO;
+Modes old_mode = mode;
 
 /* LEDs Names */
 enum struct LEDN: byte{
@@ -183,10 +194,19 @@ void loop() {
   Serial.println(" ");
 #endif
 
-  if(KEY(P2) && KEY(C1)) mode = Modes::PLAYER_ONE;
-  if(KEY(P3) && KEY(C1)) mode = Modes::ASETNIOP;
-  if(KEY(P2) && KEY(P3) && KEY(C1)) mode = Modes::PLAYER_TWO;
+  old_mode = mode;
+  if(KEY(P2) && KEY(P3) && KEY(C1)) mode = Modes::PLAYER_ONE;
+  if(KEY(P2) && KEY(P3) && KEY(C2)) mode = Modes::PLAYER_TWO;
+  if(KEY(P3) && KEY(P3) && KEY(C3)) mode = Modes::ASETNIOP;
+  if(KEY(P2) && KEY(P3) && KEY(C4)) mode = Modes::KEYBOARD_IMMEDIATE_MODE;
   if(KEY(P2) && KEY(P3) && KEY(P4) && KEY(P5)) mode = Modes::PINBALL_JOY;
+  if(old_mode!=mode) {
+    Keyboard.releaseAll();
+    for(int b=0; b<32; b++) {
+      JoystickLeft.releaseButton(b);
+      JoystickRight.releaseButton(b);
+    }
+  }
 
   /* Set unused axis to zero. */
   JoystickRight.setZAxis(512);
@@ -257,16 +277,16 @@ void loop() {
     JoystickLeft.setButton(9, KEY(C2));
     JoystickLeft.setZAxis(512+(KEY(RR)-KEY(RL))*512);
     JoystickLeft.setRxAxis(512+(KEY(RD)-KEY(RU))*512);
-    JoystickRight.setButton(10, KEY(R6));
-    JoystickRight.setButton(11, KEY(R2));
-    JoystickRight.setButton(12, KEY(R5));
-    JoystickRight.setButton(13, KEY(R1));
-    JoystickRight.setButton(14, KEY(R7));
-    JoystickRight.setButton(15, KEY(R8));
-    JoystickRight.setButton(16, KEY(R3));
-    JoystickRight.setButton(17, KEY(R4));
-    JoystickRight.setButton(18, KEY(C3));
-    JoystickRight.setButton(19, KEY(C4));
+    JoystickLeft.setButton(10, KEY(R6));
+    JoystickLeft.setButton(11, KEY(R2));
+    JoystickLeft.setButton(12, KEY(R5));
+    JoystickLeft.setButton(13, KEY(R1));
+    JoystickLeft.setButton(14, KEY(R7));
+    JoystickLeft.setButton(15, KEY(R8));
+    JoystickLeft.setButton(16, KEY(R3));
+    JoystickLeft.setButton(17, KEY(R4));
+    JoystickLeft.setButton(18, KEY(C3));
+    JoystickLeft.setButton(19, KEY(C4));
   }
 
   if(mode == Modes::PLAYER_TWO) {
@@ -350,6 +370,22 @@ void loop() {
     } else {
       cumulativeMask |= pressedMask;
     }
+  }
+
+  if(mode == Modes::KEYBOARD_IMMEDIATE_MODE) {
+    for(int k=0; k<KMS*KMS; k++) {
+      if(old_keys[k] != keys[k]) {
+        if (keys[k]) {
+          Keyboard.press(immediate_keys[k]); 
+        } else {
+          Keyboard.release(immediate_keys[k]); 
+        }
+      }
+    }    
+  }
+
+  for(int k=0; k<KMS*KMS; k++) {
+    old_keys[k] = keys[k]; 
   }
 
 }
