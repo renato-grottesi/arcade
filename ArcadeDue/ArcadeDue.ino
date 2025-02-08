@@ -98,8 +98,8 @@ const byte LEDcols[] = {
 };
 
 static inline void led_on(LEDN LEDName) {
-  digitalWrite(LEDrows[static_cast<byte>(LEDName)], HIGH);
-  digitalWrite(LEDcols[static_cast<byte>(LEDName)], LOW);
+  //   digitalWrite(LEDrows[static_cast<byte>(LEDName)], HIGH);
+  //   digitalWrite(LEDcols[static_cast<byte>(LEDName)], LOW);
 };
 
 static inline void led_off(LEDN LEDName) {
